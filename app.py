@@ -5,7 +5,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, precision_score, recall_score, f1_score, confusion_matrix, roc_curve, auc, mean_squared_error
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import GridSearchCV
 from imblearn.over_sampling import SMOTE
@@ -96,11 +96,50 @@ else:
         
         # Prediksi pada data test
         y_pred = rf_model.predict(X_test)
+        y_probs = rf_model.predict_proba(X_test)[:, 1]
         accuracy = accuracy_score(y_test, y_pred)
-
+        prec = precision_score(y_test, y_pred)
+        rec = recall_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred)
+        mse = mean_squared_error(y_test, y_pred)
+        
         # Menampilkan Metrik [cite: 149-150]
-        st.metric(label="Akurasi Model", value=f"{accuracy * 100:.2f}%")
+        mxCol1, mxCol2, mxCol3, mxCol4, mxCol5= st.columns(5)
+        
+        with mxCol1:
+            st.metric(label="Akurasi Model", value=f"{accuracy * 100:.2f}%")
+        with mxCol2:
+            st.metric(label="Precision", value=f"{prec * 100:.2f}%")
+        with mxCol3:
+            st.metric(label="Recall", value=f"{rec * 100:.2f}%")
+        with mxCol4:
+            st.metric(label="F1-Score", value=f"{f1 * 100:.2f}%")
+        with mxCol5:
+            st.metric(label="Mean Squared Error (MSE):", value=f"{mse:.4f}")
         st.success(f"Model berhasil mencapai akurasi yang kompetitif (Ref: Studi Rahman et al. mencapai ~96.7% [cite: 150]).")
+        
+        st.subheader("Visualisasi Evaluasi Model")
+        c1, c2 = st.columns(2)
+
+        with c1:
+            st.write("**Confusion Matrix**")
+            cm = confusion_matrix(y_test, y_pred)
+            fig_cm, ax_cm = plt.subplots()
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax_cm)
+            ax_cm.set_xlabel('Prediksi')
+            ax_cm.set_ylabel('Aktual')
+            st.pyplot(fig_cm)
+        with c2:
+            st.write("**ROC Curve**")
+            fpr, tpr, _ = roc_curve(y_test, y_probs)
+            roc_auc = auc(fpr, tpr)
+            fig_roc, ax_roc = plt.subplots()
+            ax_roc.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
+            ax_roc.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+            ax_roc.set_xlabel('False Positive Rate')
+            ax_roc.set_ylabel('True Positive Rate')
+            ax_roc.legend(loc="lower right")
+            st.pyplot(fig_roc)
 
         # Feature Importance [cite: 152, 249]
         st.subheader("Feature Importance (Tingkat Kepentingan Atribut)")
